@@ -34,14 +34,15 @@ class WormFinder ( object ):
         #self.trackerConnected = True
         self.captureSize = utils.Rect(self.actualRes[0], self.actualRes[1], self.centerPt)
         self.cropRegion = utils.Rect(self.cropSize,self.cropSize,self.centerPt) 
-        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.decisionOffset, 
-                                           self.actualRes[1] - self.decisionOffset, 
+        
+        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize, 
+                                           self.actualRes[1] - self.cropSize, 
                                            self.centerPt)
 
         ### Timing ###
         self.lastRefTime = time.time()        
         self.pauseFrame = 0 #cropping wise
-        self.nPauseFrames = 20 #cropping wise
+        self.nPauseFrames = 10 #cropping wise
         
         self.breakDuration = 3 # motor wise
         self.breakStart = time.time()
@@ -72,10 +73,12 @@ class WormFinder ( object ):
 
     def setColoring( self, value ):
         self.coloring = value
+
     def setDecisionOffset( self, value ):
-        self.decisionOffset = value
-        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.decisionOffset, 
-                                           self.actualRes[1] - self.decisionOffset, 
+        self.cropSize = value
+        self.cropRegion = utils.Rect(self.cropSize,self.cropSize,self.centerPt) 
+        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize,
+                                           self.actualRes[1] - self.cropSize,
                                            self.centerPt)
 
     @property
@@ -91,12 +94,13 @@ class WormFinder ( object ):
     def resetRef( self ):
         self.pauseFrame = 0
         self.refImg = None
+
                 ### Cropping ###
         self.cmin = 0
         self.cmax = self.captureSize.ncols
         self.rmin = 0
         self.rmax = self.captureSize.nrows
-
+#        self.launch = 0
 
     """ 
     FIND WORMS
@@ -223,7 +227,7 @@ class WormFinder ( object ):
             if self.wormOutsideBoundary('point'):
                 ## Check previous location of worm
                 if not self.wormRidiculousLocation():
-                    logger.warning('MOVE!!!')
+                    #logger.warning('MOVE!!!')
                     self.justMoved = True
                     self.resetRef()
                     self.breakStart = time.time()
@@ -233,7 +237,7 @@ class WormFinder ( object ):
                         th.start()
 #                        self.servos.centerWorm(100, self.wormLocation.col, self.wormLocation.row)
                     except:
-                        logger.warning('GRR')
+                        logger.warning('move command not sent')
                 else:
                     logger.warning('Impossible location: too far from previous')
         logger.info('processing: %0.6f' % (time.time() - t))
@@ -254,18 +258,19 @@ class WormFinder ( object ):
     
     def wormOutsideBoundary ( self, method ):
         if method == 'point':
-            rowLeft = self.wormLocation.row < self.decisionBoundary.left
-            rowRight = self.wormLocation.row > self.decisionBoundary.right
-            colTop = self.wormLocation.col < self.decisionBoundary.top
-            colBottom =  self.wormLocation.col > self.decisionBoundary.bottom
+            
+            rowTop = self.wormLocation.row < self.decisionBoundary.top
+            rowBottom = self.wormLocation.row > self.decisionBoundary.bottom
+            colLeft = self.wormLocation.col < self.decisionBoundary.left
+            colRight =  self.wormLocation.col > self.decisionBoundary.right
         
-        elif method == 'rect': 
-            rowLeft = self.cropRegion.left < self.decisionBoundary.left
-            rowRight = self.cropRegion.right > self.decisionBoundary.right
-            colTop = self.cropRegion.bottom < self.decisionBoundary.top
-            colBottom = self.cropRegion.top > self.decisionBoundary.bottom
+       # elif method == 'rect': 
+       #     rowLeft = self.cropRegion.left < self.decisionBoundary.left
+       #     rowRight = self.cropRegion.right > self.decisionBoundary.right
+       #     colTop = self.cropRegion.bottom < self.decisionBoundary.top
+       #     colBottom = self.cropRegion.top > self.decisionBoundary.bottom
         
-        return (rowLeft or rowRight) or (colTop or colBottom)
+        return (rowTop or rowBottom) or (colLeft or colRight)
 
 
     """

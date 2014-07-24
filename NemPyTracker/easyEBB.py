@@ -9,11 +9,11 @@ import time
 import eggbot_scan
 import sys
 import os
-from multiprocessing import Process
+
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 UMSTEP = 200
 platform = sys.platform.lower()
 
@@ -22,31 +22,32 @@ if platform == 'win32':
 	HOME = os.path.realpath( "C:/" )  # Arguably, this should be %APPDATA% or %TEMP%
 
 class EasyEBB:
-    def __init__( self, resolution = [1280,960], sizeMM = 10, stepMode = 5 ):
+    def __init__( self, resolution, sizeMM ):
         """
         Initializes an easyEBB object
         """
         self.actualSerialPort = ''
         self.connected = self.openSerial()
         self.sizeMM = sizeMM
-        ### Get size of window in mm and convert to um
+        self.resolution = resolution
+        self.stepMode = 5
         self.colUM = sizeMM * 1000. #length of cols (x) in um
-#        self.rowUM = sizeMM[1] * 1000. #length of rows (y) in um
-        
+
         logger.debug('Size in um:\tcol %0.3f\trow %0.3f' %
                      (self.colUM, self.colUM) )
 
         ### Get size of window in pixels
-        self.colNumPix = resolution[0] #length of rows in pixels
-        self.rowNumPix = resolution[1] #length of cols in pixels
+        self.colNumPix = resolution[0] 
+        self.rowNumPix = resolution[1] 
 
-        logger.debug('Size in pix:\tcol %d\trow  %d' %
+        logger.warning('Resolution is %s: ' % str( resolution ) )
+        logger.info('Size in pix:\tcol %d\trow  %d' %
                      (self.colNumPix, self.rowNumPix) )
 
-        self.pixUmStepConversions(stepMode)
-        #self.enableMotors()
+        self.pixUmStepConversions()
+        self.enableMotors()
         
-    def pixUmStepConversions( self, stepMode ):
+    def pixUmStepConversions( self ):
         """ 
         Uses resolution and size in mm to convert pixel measurements 
         to steps (unit of servos)
@@ -59,7 +60,7 @@ class EasyEBB:
         self.colPixSpacing = self.colNumPix / self.colUM 
         self.rowPixSpacing = self.colPixSpacing
 
-        logger.debug('1 um = ? pixels\tcol %0.3f\trow %0.3f' %
+        logger.warning('1 um = ? pixels\tcol %0.3f\trow %0.3f' %
                      (self.colPixSpacing, self.rowPixSpacing))
         
         ### Step mode settings
@@ -68,8 +69,7 @@ class EasyEBB:
                          3: 1./4, 
                          4: 1./2, 
                          5: 1}
-        self.stepMode = stepMode #from keys of stepOpts
-        
+                
         ### Get um per step (1 step = ? um)
         self.stepUM = ( UMSTEP * self.stepOpts[self.stepMode] )
         
@@ -77,10 +77,10 @@ class EasyEBB:
         self.colPixStep = self.stepUM * self.colPixSpacing
         self.rowPixStep = self.stepUM * self.rowPixSpacing
         
-        logger.info('One step is %0.3f pixels' %  (self.colPixStep) )
+        logger.warning('One step is %0.3f pixels' %  (self.colPixStep) )
         logger.info('Current stepMode value: %0.4f, EBB stepMode key: %d' % 
                     (self.stepOpts[self.stepMode], self.stepMode ))
-        logger.info('1 step = %0.4f um' % self.stepUM )
+        logger.warning('1 step = %0.4f um' % self.stepUM )
 
 
 
@@ -108,15 +108,15 @@ class EasyEBB:
          #logger.warning('Centering Worm')
          xInstPix = self.colMid - colWormPix
          yInstPix = self.rowMid - rowWormPix
-                  
+#         logger.warning('Center of frame: %d, %d' % (self.colMid, self.rowMid) )
          rowSteps = int(yInstPix / self.colPixStep)
          colSteps = int(xInstPix / self.rowPixStep)
          
-         logger.warning('From (col,row): (%d, %d) to center | steps: (%d, %d)' % (colWormPix, rowWormPix, colSteps, -rowSteps))
+         logger.warning('From (col,row): (%d, %d) to center | steps: (%d, %d)' % (colWormPix, rowWormPix, colSteps, rowSteps))
          #send x, y separately
-         self.move( duration, colSteps, 0) 
-         self.move( duration, 0, -rowSteps)#adjusted for orientation
-         return colSteps, -rowSteps
+         self.move( duration, -colSteps, rowSteps) 
+         #self.move( duration, 0, rowSteps)
+         return -colSteps, rowSteps
         
     def move(self, duration, xstep, ystep):
         """
@@ -132,7 +132,7 @@ class EasyEBB:
         cmd = ('SM,%d,%d,%d\r' %(duration, xstep, ystep))
         self.doCommand(cmd)
         #self.disableMotors()
-        logger.info('Command sent: move x:%d y:%d in steps' % (xstep, ystep))
+        #logger.debug('Command sent: move x:%d y:%d in steps' % (xstep, ystep))
         
 
     def openSerial( self ):
@@ -249,7 +249,7 @@ class EasyEBB:
         Disables both motors on EiBotBoard
         """
         logger.info('Servos Enabled')
-        cmd = 'EM,1,1\r'
+        cmd = 'EM,%d,%d\r' % (self.stepMode, self.stepMode)
         self.doCommand(cmd)
 
         
