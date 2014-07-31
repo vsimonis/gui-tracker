@@ -1,10 +1,9 @@
 from PyQt5 import QtGui, QtCore, QtWidgets
-from NemPyTracker import Ui_TrackerUI
-#f#rom Capture import Capture
+from trackerUI import Ui_TrackerUI
 from easyEBB import EasyEBB
 from managers import CaptureManager
 from finder import WormFinder
-import time
+import time, datetime
 import numpy as np
 import cv2
 import logging
@@ -16,8 +15,6 @@ import copy
 import serial, os
 import re
 
-
-
 LOGGING_LEVELS = {'critical': logging.CRITICAL,
              'error': logging.ERROR,
              'warning': logging.WARNING,
@@ -25,25 +22,19 @@ LOGGING_LEVELS = {'critical': logging.CRITICAL,
              'debug': logging.DEBUG}
 
 logger = logging.getLogger('')
+logger.setLevel(logging.INFO)
 
 class Gui(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        logger.warning('starting up')
-        
 
-        
+        logger.warning('starting up')
+        self.startRecTime = None
         ## Instantiate classes
         self.ui = Ui_TrackerUI()
         self.ui.setupUi(self)
         self._cap  = None
-
-
-        ## Give options to comboBoxes
-        for k,v in LOGGING_LEVELS.items():
-            self.ui.loggingCombo.addItem(k,v)
-
         #What to display on screeeeeeen
         source = [0, 1, 2, 3, 'led_move1.avi', 'wormtest.avi',
                   'screencast.avi',
@@ -56,25 +47,12 @@ class Gui(QtWidgets.QMainWindow):
                   'cinqodemayo.avi']
         
         for s in source:
-            self.ui.sourceCombo.addItem(str(s))
-        self.ui.sourceCombo.setCurrentText('0')
-
-        method = ['lazy','lazyc','lazyd']
-
-        for m in method:
-            self.ui.methodCombo.addItem(str(m))
-        self.ui.methodCombo.setCurrentText( 'lazyc' )
-        
-        for c in utils.colors.iterkeys():
-            self.ui.coloringCombo.addItem( str(c) )
-        self.ui.coloringCombo.setCurrentText( 'gray-1')
-
+            self.ui.srcCombo.addItem(str(s))
+        self.ui.srcCombo.setCurrentText('0')
         self.showImage = False ## If True, video gets displayed (need _cap)
 
         ## Stuff you can change in the UI
         self.idealRes = [1280, 960]
-
-        
 
         ## Video stuff
         self._timer = QtCore.QTimer( self )
@@ -91,8 +69,6 @@ class Gui(QtWidgets.QMainWindow):
         self._wormFinder = None  
         cv2.namedWindow('gaussian')
 
-        
-#        self.shareFileName = '%s' % (time.strftime("%a_%d_%b_%Y-%H %M %S") )
 
         ## Register button actions
         self.ui.buttonRight.clicked.connect( partial( self.motors, 'right' ) )
@@ -104,197 +80,182 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.buttonConnect.clicked.connect( self.connectMotors )
         self.ui.buttonReset.clicked.connect (self.resetAll )
 
-        self.ui.buttonMotorsOn.clicked.connect( self.motorsToOn )
-        self.ui.buttonMotorsOff.clicked.connect( self.motorsToOff )
+        self.ui.buttonMotorized.clicked.connect( self.motorized )
 
-        self.ui.buttonStartRecording.clicked.connect( self.recordingToStart )
-        self.ui.buttonStopRecording.clicked.connect( self.recordingToStop )
+        self.ui.buttonRec.clicked.connect( self.record )
+
+        self.ui.srcCombo.activated['QString'].connect( self.setSource )
 
         self.ui.scalingSlider.valueChanged[int].connect( self.setMultFactor )
         self.ui.scaling.setText( 'Step scaling is %d' % self.ui.scalingSlider.value() ) 
         self.multFactor = self.ui.scalingSlider.value()
-        
-        #self.ui.loggingCombo.activated['QString'].connect( self.setLogging )
-        self.ui.sourceCombo.activated['QString'].connect( self.setSource )
-        self.ui.methodCombo.activated['QString'].connect( self.setMethod )
-        self.ui.coloringCombo.activated['QString'].connect( self.setColoring )
-
-#        self.ui.boundaryEdit.textChanged.connect( self.setDecisionOffset )
-        self.ui.boundaryEdit.editingFinished.connect( self.setDecisionOffset )
         self.ui.studyName.editingFinished.connect( self.setFileName )
 
-        self.newFileFLAG = True
-
+        ## Change button colors for pretty
+ 
+        self.ui.buttonMotorized.setText("Turn On")
+        self.ui.buttonRec.setText("Start")
+        self.ui.fps.setText("")
+        self.ui.lcdNumber.display("")
+        ## Read in file from calibration GUI
         self.readInCalibration()
-        #self.setAble('motors', False)
-        # self.setFileName()
-        self.setAble('debug', False)
-        self.setAble('buttons', False)
-        self.setAble('motors', False)
-        self.setAble('motorized', False)
-        self.setAble('recording', False)
 
+        ## Disable buttons
+        self.setAble( 'motors', False ) 
+        self.setAble( 'motorized', False ) 
+        self.setAble( 'source', False ) 
+        self.setAble( 'buttons', False ) 
+        self.setAble( 'recording', False )
+
+        
+
+    def setAble( self, group, ability ): 
+        groups = { 'connectMotors' : [ self.ui.buttonConnect ],
+                   'motors' : [ self.ui.scaling, 
+                                self.ui.buttonUp, 
+                                self.ui.buttonDown, 
+                                self.ui.buttonLeft,
+                                self.ui.buttonRight ], 
+                   'motorized' : [ self.ui.buttonMotorized, 
+                                   self.ui.motorsDesc ], 
+                   'study' : [ self.ui.studyDesc, 
+                               self.ui.studyName ], 
+                   'source': [ self.ui.srcDesc, 
+                               self.ui.srcCombo ], 
+                   'buttons': [ self.ui.buttonRun, 
+                                self.ui.buttonConnect, 
+                                self.ui.buttonRefresh ], 
+                   'recording' : [ self.ui.recordingDesc, 
+                                   self.ui.buttonRec ],
+                   'reset' : [ self.ui.scaling, 
+                               self.ui.buttonUp, 
+                               self.ui.buttonDown, 
+                               self.ui.buttonLeft,
+                               self.ui.buttonRight,
+                               self.ui.buttonMotorized, 
+                               self.ui.motorsDesc,
+                               self.ui.studyDesc, 
+                               self.ui.studyName,
+                               self.ui.buttonRun, 
+                               self.ui.buttonConnect, 
+                               self.ui.buttonRefresh,
+                               self.ui.recordingDesc, 
+                               self.ui.buttonRec ] 
+               }
+        for c in groups[group]:
+            c.setEnabled(ability)
 
     def setFileName ( self ) :
-        self.shareFileName = '%s-%s' % ( self.ui.studyName.text(), time.strftime( "%a_%d_%b_%Y-%H %M %S" ) )
-        if self.ui.loggingCombo.currentText is not '':
-            self.setLogging( self.ui.loggingCombo.currentText())
-        self.setAble( self.ui.buttonRun, True)
-        self.setAble( self.ui.buttonConnect, True)
+        self.shareFileName = '%s/%s-%s' % ('output', self.ui.studyName.text(), time.strftime( "%a_%d_%b_%Y-%H%M%S" ) )
+        self.setLogging('debug')
         self.setAble( 'study', False ) 
+        self.setAble( 'buttons', True)
+        self.ui.buttonRefresh.setEnabled(False) 
 
     def getNewRef( self ):
         if self._wormFinder:
             self._wormFinder.resetRef()
 
-    def setDecisionOffset( self ):
-        if self._wormFinder:
-            do = self.ui.boundaryEdit.text()
-            try:
-                d = int(do)
-                self._wormFinder.setDecisionOffset( d )
-            except Exception as e:
-                logger.exception( str(e) )
-                    
 
-    def setColoring( self, value ):
-        if self._wormFinder:
-            self._wormFinder.setColoring( value )
-
-    def recordingToStart( self ):
-        self.shareFileName = '%s-%s' % ( self.ui.studyName.text(), time.strftime( "%a_%d_%b_%Y-%H %M %S" ) )
-        platform = sys.platform.lower()
-        if platform in ['win32', 'win64']:
-
-            fourcc = cv2.VideoWriter_fourcc(*'IYUV')
-            logger.warning( 'fourcc is IYUV')
-        else:
-            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-            logger.warning( 'fourcc is MJPG')
-        if not self._cap.isWritingVideo:
-            self._cap.startWritingVideo('%s.avi' % self.shareFileName, fourcc)
-        #self.ui.fps.setText( str( self._cap._fpsEstimate ) )
-        self.setAble(self.ui.buttonStartRecording, False)
-        self.setAble(self.ui.buttonStopRecording, True)
-
-    def recordingToStop( self ):
+    def record( self ):
         if self._cap.isWritingVideo:
             self._cap.stopWritingVideo()
-            #        self.ui.buttonStartRecording
-        self.setAble(self.ui.buttonStartRecording, True)
-        self.setAble(self.ui.buttonStopRecording, False)
+            self.ui.buttonRec.setStyleSheet('QPushButton {color:green}')
+            self.ui.buttonRec.setText("Start")
+            self.startRecTime = None
+        else:
+            self.startRecTime = time.time()
+            self.shareFileName = '%s/%s-%s' % ('output', 
+                                               self.ui.studyName.text(), 
+                                               time.strftime( "%a_%d_%b_%Y-%H%M%S" ) )
+            logger.debug('New sharefilename')
 
+            platform = sys.platform.lower()
+            if platform in ['win32', 'win64']:
+                fourcc = cv2.VideoWriter_fourcc(*'IYUV')
+                logger.warning( 'fourcc is IYUV')
+            else:
+                fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                logger.warning( 'fourcc is MJPG')
+            if not self._cap.isWritingVideo:
+                self._cap.startWritingVideo('%s.avi' % self.shareFileName, 
+                                            fourcc)    
+            self.ui.buttonRec.setStyleSheet('QPushButton {color:red}')
+            self.ui.buttonRec.setText("Stop")
 
-    def motorsToOn( self ):
-        self.motorsOn = True
-        self._wormFinder.launch = 0
-        logger.info('motors on')
-        self.setAble('motors', False)
-        self.setAble('recording', True)
-        self.setAble(self.ui.buttonStopRecording, False)
-        self.setAble(self.ui.buttonMotorsOff, True)
-        self.setAble(self.ui.buttonMotorsOn, False)
-        self.setAble(self.ui.boundaryEdit, False)
-        self.setAble(self.ui.boundaryDesc, False)
-
-    def motorsToOff( self ):
-        self.motorsOn = False
-        logger.info('motors off')
-        self.setAble(self.ui.buttonMotorsOff, False )
-        self.setAble(self.ui.buttonMotorsOn, True )
-        self.setAble('motors', True)
-#        self.setAble('recording', True)
-        
-
-
-
+    def motorized( self ):
+        if self.motorsOn:
+            self.motorsOn = False
+            logger.info('motors off')
+            self.ui.buttonMotorized.setStyleSheet('QPushButton {color:green}')
+            self.ui.buttonMotorized.setText("Turn On")
+            self.setAble('motors', True) 
+        else:
+            self.motorsOn = True
+            self._wormFinder.launch = 0
+            logger.info('motors on')
+            self.ui.buttonMotorized.setStyleSheet('QPushButton {color:red}')
+            self.ui.buttonMotorized.setText("Turn Off")
+            self.setAble('motors', False) 
     def run ( self ):
-        logger.info("Start running tracking")
-        # setup logggin????
-        #self.setLogging(self.ui.loggingCombo.currentText())
+        logger.info("Start worm finder")
+
         if self._wormFinder:
             self._wormFinder = None
 
         if not self._cap:
             self.setSource(self.ui.sourceCombo.currentText())
-            
-        #self.actualRes = self._cap.getResolution()
+
         self.centerPt = utils.Point(self.actualRes[0] / 2, self.actualRes[1] / 2)
         self.cropSize = 100
-#        self.decisionOffset = 55
         
         self.finderArgs = {
             'gsize' :  45,
             'gsig' : 9,
             'window' : 3,
-            'method' : self.ui.methodCombo.currentText(),
+            'method' : 'lazyc',
             'MAXONEFRAME': 500,
             'REFPING' : 1000,
             'MAXREF': 1000,
             'cropSize': self.cropSize,
             'centerPt': self.centerPt,
- #           'decisionOffset': self.decisionOffset,
             'servos': self.ebb,
             'actualRes': self.actualRes,
             'motorsOn': self.motorsOn
             }
 
-        self.ui.boundaryEdit.setText( str(self.cropSize) )
+
         self._wormFinder = WormFinder( **self.finderArgs )     
 
         self.runTracking = True
+        self.startTrackTime = time.time()
         self.showImage = True
-        self.setAble( self.ui.buttonRefresh, True) 
-        self.setAble( self.ui.buttonRun, False )
-        self.setAble ( self.ui.coloringCombo, True ) 
-        self.setAble( self.ui.coloringDesc, True ) 
-        self.setAble( self.ui.boundaryEdit, True ) 
-        self.setAble( self.ui.boundaryDesc, True ) 
+        self.ui.buttonRun.setEnabled(False)
+        self.ui.buttonRefresh.setEnabled(True) 
         if self.ebb:
-            self.setAble('motorized', True)
-            self.setAble(self.ui.buttonMotorsOff, False)
-        self.setAble('recording', True)
-
+            self.setAble('motorized', True )
+        self.setAble('recording', True ) 
+    
     def connectMotors( self ):
         logger.info("Connect Motors")
         if self._cap:
-            #self.actualRes = self._cap.getResolution()
             try:
                 logger.debug('width mm %d' % self.widthMM)
                 self.ebb = EasyEBB(resolution = self.actualRes, sizeMM = self.widthMM)
                 self.setAble('motors', True)
-                self.setAble(self.ui.buttonConnect, False)
+                self.setAble('connectMotors', False)
+                self._cap.resetFPSestimate()
                 if self._wormFinder:
                     self._wormFinder.servos = self.ebb
-                    self.setAble('motorized', True)
-                    self.setAble(self.ui.buttonMotorsOff, False)
+                    self.setAble('motorized', True) 
             except serial.SerialException as e:
                 logger.exception(str(e))
                 QtWidgets.QMessageBox.information( self, "Motors Issue",
                                                   "Unable to connect to motors. Please connect or reboot motors. If problem persists, reboot computer")
-
-        else: #possibly not necessary now with greyed out options
-            self.setSource( self.ui.sourceCombo.currentText() )
-            logger.debug('Source set to current combo box value')
-            try:
-                logger.debug('width mm: %d' % self.widthMM )
-                self.ebb = EasyEBB(resolution = self.actualRes, sizeMM = self.widthMM)
-                self.setAble('motors', True)
-            except serial.SerialException as e:
-                logger.exception(str(e))
-                QtWidgets.QMessageBox.information( self, "Motors Issue",
-                                                  "Unable to connect to motors. Please connect or reboot motors. If problem persists, reboot computer")
-
-
-
-    def setMethod (self, value ):
-        self.method = str(value)
-        if self._wormFinder:
-            self._wormFinder.setMethod( self.method )
 
     def setSource ( self, value ):
-        #self.setLogging(self.ui.loggingCombo.currentText())
         self.existingVid = False
+
         if type(value) != int:
             nums = re.compile(r'\d*')
             mat = re.match(nums,value).group(0)
@@ -308,8 +269,6 @@ class Gui(QtWidgets.QMainWindow):
             src = value
             self.ui.sourceCombo.setCurrentText(str(src))
             
-            
-
         if self._cap:
             if self._cap._capture.isOpened(): #ugly access to VideoCapture object from managers
                 self._cap._capture.release()
@@ -328,35 +287,28 @@ class Gui(QtWidgets.QMainWindow):
 
         self.actualRes = self._cap.getResolution()
         logger.warning("Actual resolution from cam is %s" % str( self.actualRes ) )
-        self.setAble('source', False)
-        self.setAble(self.ui.buttonConnect, True)
-        self.setAble(self.ui.buttonRun, True)
-        
+        self.setAble('source', False) 
+        self.setAble('buttons', True)
+        self.ui.buttonRefresh.setEnabled(False)
 
     def setLogging( self, value ):
         addFile = True
         formatter = logging.Formatter( '%(asctime)s\t%(levelname)s\t%(name)s\t\t%(message)s' )
-        #self.setFileName() 
         file = logging.FileHandler( '%s.log' % self.shareFileName )
         logger.warning('New file')
         file.setLevel( LOGGING_LEVELS['debug'] )
         file.setFormatter( formatter )
         
-        #logger.setLevel(LOGGING_LEVELS[str(value)] )
         console = logging.StreamHandler()
-        console.setLevel( LOGGING_LEVELS[str(value)] )
+        console.setLevel( LOGGING_LEVELS['debug'] )
         console.setFormatter( formatter )
         
         for h in logger.handlers:
             if type(h) == logging.StreamHandler:
                 logger.removeHandler( h ) 
             elif type(h) == logging.FileHandler: #if file has started, leave it be!!!
-            #    if self.newFileFLAG:
                 addFile = False
-            #        h.close()
-            #    else:
-            #       addFile = False
-                    
+
         if addFile:
             logger.addHandler( file )
 
@@ -367,49 +319,11 @@ class Gui(QtWidgets.QMainWindow):
         self.multFactor = value
         self.ui.scaling.setText( 'Step scaling is %d' % value)
    
-    def setAble( self, group, ability ):
-        groups = {'debug' : [ self.ui.loggingCombo, 
-                             self.ui.loggingDesc,
-                             self.ui.methodCombo,
-                             self.ui.methodDesc,
-                             self.ui.boundaryDesc,
-                             self.ui.boundaryEdit, 
-                             self.ui.coloringCombo,
-                             self.ui.coloringDesc],
-                  'source' : [ self.ui.sourceCombo,
-                              self.ui.sourceDesc],
-                  'motors' : [self.ui.buttonLeft, 
-                               self.ui.buttonRight,
-                               self.ui.buttonUp, 
-                               self.ui.buttonDown, 
-                               self.ui.scalingSlider, 
-                               self.ui.scaling],
-
-                  'motorized': [ self.ui.buttonMotorsOff, 
-                                self.ui.buttonMotorsOn,
-                                self.ui.motorsDesc ],
-
-                  'recording': [self.ui.buttonStartRecording, 
-                                self.ui.buttonStopRecording, 
-                                self.ui.recordingDesc ],
-
-                  'study':[self.ui.studyDesc, 
-                           self.ui.studyName],
-                  'buttons': [self.ui.buttonConnect, self.ui.buttonRefresh, self.ui.buttonRun]
-                  }
-       
-        if group in groups.iterkeys():
-            for g in groups[group]:
-                g.setEnabled(ability)
-
-        else:
-            group.setEnabled(ability)
-
-
+   
     def readInCalibration( self ):
         c = os.path.dirname(os.getcwd())
         cc = os.path.dirname(c)
-        f = open( ("%s\\config.txt" % cc) , "r")
+        f = open( ("%s/config.txt" % cc) , "r")
         line = f.readline()
         f.close()        
         logger.warning('line: %s' % str(line)  )
@@ -436,9 +350,8 @@ class Gui(QtWidgets.QMainWindow):
             #print dir[direction]
             th = threading.Thread(target  = self.ebb.move , args = dir[direction] )
             try:
-                #partial(self.ebb.move, dir[direction])
                 th.start()
-                #th.join()
+
             except Exception as e:
                 logger.exception( str(e) )
     
@@ -451,29 +364,25 @@ class Gui(QtWidgets.QMainWindow):
             cv2.destroyWindow('gaussian')
             
         if self._cap.isWritingVideo:
-            self._cap.stopWritingVideo()
+            self.record()
+            self.ui.buttonRec.setStyleSheet('QPushButton {}')
+#            self._cap.stopWritingVideo()
+
         if self._cap._capture.isOpened():
             self._cap._capture.release()
+
         self.showImage = False
         self.runTracking = False
-        self.motorsOn = False
+        if self.motorsOn:
+            self.motorized()
+            self.motorsOn = False
+            self.ui.buttonMotorized.setStyleSheet('QPushButton {}')
         self.ui.videoFrame.setText("Select source if video not displayed here on boot up")
         self.ui.fps.setText("")
         logger.info("Reset button pressed") 
-#        self.setFileName()
-#        self.newFileFLAG = True
-        ## GUI buttons enable
+
         self.setAble('source', True)
-#        self.setAble('study', True)
-        self.setAble('debug', False)
-        self.setAble('buttons', False)
-        self.setAble('motors', False)
-        self.setAble('motorized', False)
-        self.setAble('recording', False)
-        self.readInCalibration()
-        self.setAble('study', False)
-        self.setAble('source', True)
-#        self.ui.setupUi(self)
+        self.setAble('reset', False) 
 
     def closeEvent ( self, event):
         logger.debug("closing")
@@ -526,27 +435,48 @@ class Gui(QtWidgets.QMainWindow):
                     self._cap.exitFrame()
             
             self._cap.exitFrame()
-            if not self.runTracking:
-                if self.showImage:
+            
+            if not self.runTracking: #no finder
+                if self.showImage: #yes capture
                     self.ui.videoFrame.setPixmap(self._cap.convertFrame(self.currentFrame))
-            else:
-                ## Tracking procedure
+                    self.ui.videoFrame.setScaledContents(True)
+            else: # yes finder
+                ## Stop if too dark!!!
+                if time.time() - self.startTrackTime < 5:
+                    self.firstAvgPixIntensity = np.mean(self.currentFrame)
+                    logger.debug('first avg int: %d' % self.firstAvgPixIntensity)
+               ## Tracking procedure
                 if time.time() - self._lastCheck >= self._sampleFreq:
-                    if self.ui.methodCombo.currentText() in ['lazyc', 'lazyd', 'lazy']:
-
-                        gaussian = self._wormFinder.processFrame( self.currentFrame )
-                        if gaussian is not None:
-                            cv2.imshow( 'gaussian', gaussian )
-                        #self.overlayImage = copy.deepcopy(self.currentFrame)
+                    gaussian = self._wormFinder.processFrame( self.currentFrame )
+                    if gaussian is not None:
+                        cv2.imshow( 'gaussian', gaussian )
                         
-                        if self.motorsOn:
-                            self._wormFinder.decideMove()
-                        self._lastCheck = time.time()
-                        self._wormFinder.drawDebugCropped( self.currentFrame)
+                    if self.motorsOn: #yes motorized
+                        ## Stop motors if too dark
+                        self.currentAvgPixIntensity = np.mean(self.currentFrame)
+                        logger.debug('current avg int: %d' % self.currentAvgPixIntensity)
+                        if self.currentAvgPixIntensity < self.firstAvgPixIntensity - 50:
+                            logger.warning('Darkening of picture: motors turned off')
+                            if self.motorsOn:
+                                self.motorized()
+                            if self._cap.isWritingVideo:
+                                self.record()
+                        else:
+                          self._wormFinder.decideMove()
+                    self._lastCheck = time.time()
+                    self._wormFinder.drawDebugCropped( self.currentFrame)
+                    
+                    self.ui.videoFrame.setPixmap(self._cap.convertFrame(self.currentFrame))
+                    self.ui.videoFrame.setScaledContents(True)
 
-                        self.ui.videoFrame.setPixmap(self._cap.convertFrame(self.currentFrame))
-            #if self._cap.isWritingVideo:
             self.ui.fps.setText( str( self._cap._fpsEstimate ) )
+            if self.startRecTime:
+                elapsedSec = time.time() - self.startRecTime
+                elapsed = time.strftime("%H.%M.%S", time.gmtime(elapsedSec) ) 
+                self.ui.lcdNumber.setNumDigits(8)
+                self.ui.lcdNumber.display( elapsed )
+            else:
+                self.ui.lcdNumber.display("") 
         return
         
     '''
@@ -571,8 +501,6 @@ class Gui(QtWidgets.QMainWindow):
 
 def main():
     app = QtWidgets.QApplication( sys.argv )
-    #filter = ValEventFilter()
-    #app.installEventFilter(filter)
     g = Gui()
     g.show()
     sys.exit( app.exec_() )

@@ -64,9 +64,6 @@ class WormFinder ( object ):
         self.rmin = 0
         self.rmax = self.captureSize.nrows
 
-        ### Logging ###
-        logger.debug('is Debug')
-        logger.info('is Info')
 
         ## Cosmetic ##
         self.coloring = 'gray-1'
@@ -240,7 +237,7 @@ class WormFinder ( object ):
                         logger.warning('move command not sent')
                 else:
                     logger.warning('Impossible location: too far from previous')
-        logger.info('processing: %0.6f' % (time.time() - t))
+        logger.debug('processing: %0.6f' % (time.time() - t))
         return
 
                                                  
@@ -281,8 +278,8 @@ class WormFinder ( object ):
     Debugging Points
     '''
     def drawDebugCropped( self, img ):
-       self.wormLocation.draw( img, self.coloring )
+       self.wormLocation.draw( img, 'white-1')
 
-       self.decisionBoundary.draw( img, self.coloring )
+       self.decisionBoundary.draw( img, 'black-1')
        if self.croppedSearchSpace():
-           self.cropRegion.draw(img, self.coloring )
+           self.cropRegion.draw(img, 'black-1' )

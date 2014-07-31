@@ -67,7 +67,7 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -148,13 +148,13 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>670</x>
-      <y>70</y>
+      <y>30</y>
       <width>121</width>
-      <height>436</height>
+      <height>481</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -199,6 +199,13 @@
       </layout>
      </item>
      <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
       <layout class="QVBoxLayout" name="motoControls">
        <item>
         <widget class="QLabel" name="scaling">
@@ -209,6 +216,9 @@
          </property>
          <property name="text">
           <string>TextLabel</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -285,6 +295,51 @@
       </layout>
      </item>
      <item>
+      <widget class="Line" name="line_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="motorizedControls">
+       <item>
+        <widget class="QLabel" name="motorsDesc">
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Motorized</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="buttonMotorized">
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>On</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
       <layout class="QVBoxLayout" name="recControls">
        <item>
         <widget class="QLabel" name="recordingDesc">
@@ -295,6 +350,9 @@
          </property>
          <property name="text">
           <string>Recording</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -313,32 +371,11 @@
       </layout>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="motorizedControls">
-       <item>
-        <widget class="QLabel" name="motorsDesc">
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>Motorized</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="buttonMotorsOn">
-         <property name="font">
-          <font>
-           <pointsize>8</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>On</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="Line" name="line_4">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
      </item>
      <item>
       <layout class="QVBoxLayout" name="viewer">
@@ -371,34 +408,16 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="recViewer">
-         <item>
-          <widget class="QLabel" name="recDesc">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Rec Length</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="rec">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Rec</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <widget class="QLCDNumber" name="lcdNumber"/>
        </item>
       </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line_5">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="buttonReset">
@@ -415,14 +434,7 @@
     </layout>
    </widget>
    <zorder>layoutWidget</zorder>
-   <zorder>studyControls</zorder>
    <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>layoutWidget</zorder>
-   <zorder>buttonReset</zorder>
-   <zorder>srcDesc</zorder>
-   <zorder>srcCombo</zorder>
    <zorder>videoFrame</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">

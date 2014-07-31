@@ -4,7 +4,7 @@ import time
 import logging
 from PyQt5 import QtGui, QtCore, Qt
 
-logc = logging.getLogger(__name__)
+logger = logging.getLogger('capture')
 #logw = logging.getLogger('window')
 
 class CaptureManager( object ):
@@ -45,6 +45,8 @@ class CaptureManager( object ):
                 logging.warning('Grayscale')
                 return False
 
+    def resetFPSestimate( self ):
+        self._framesElapsed = 0
 
     @property
     def isWritingImage( self ):
@@ -120,7 +122,7 @@ class CaptureManager( object ):
             timeElapsed = time.time() - self._startTime
             if timeElapsed > 0 :
                 self._fpsEstimate = self._framesElapsed / timeElapsed
-                logc.info('fps estimate: %d' % self._fpsEstimate )
+                logger.debug('fps estimate: %d' % self._fpsEstimate )
         self._framesElapsed += 1
 
         #Write to video 
@@ -137,39 +139,38 @@ class CaptureManager( object ):
     def startWritingVideo( self, filename, encoding ):
         self._videoFilename = filename
         self._videoEncoding = encoding
-        logc.warning( 'Start Writing Video: %s' % filename )
+        logger.warning( 'Start Writing Video: %s' % filename )
 
     def stopWritingVideo ( self ):
         self._videoFilename = None
         self._videoEncoding = None
         self._videoWriter.release()
-        self._videoWrite = None
-        logc.warning( 'Stop Writing Video' )
+        self._videoWriter = None
+        logger.warning( 'Stop Writing Video' )
         
 
     def _writeVideoFrame( self ):
         if not self.isWritingVideo:
             return
-        
         if self._videoWriter is None:
             fps = self._capture.get( cv2.CAP_PROP_FPS ) 
-            logc.info("fps: %d" % fps)
+            logger.info("fps: %d" % fps)
             if fps <= 0.0:
                 if self._framesElapsed < 20: 
                     # wait for more frames to get good estimate
                     return
                 else: 
-                    logc.warning('fps estimate used: %d' % self._fpsEstimate )
+                    logger.warning('fps estimate used: %d' % self._fpsEstimate )
                     fps = self._fpsEstimate            
 
             size = ( int (self._capture.get( cv2.CAP_PROP_FRAME_WIDTH )), 
                      int( self._capture.get( cv2.CAP_PROP_FRAME_HEIGHT) ))
-            logc.info('size used: %d x %d' % (size[0], size[1]) )
+            logger.info('size used: %d x %d' % (size[0], size[1]) )
             #self._videoEncoding = -1
             #self.isColor()
             self._videoWriter = cv2.VideoWriter( self._videoFilename, 
                                                  self._videoEncoding, fps, size, self.isColor() )
-        logc.warning("wrote frame")
+        logger.warning("wrote frame")
         self._videoWriter.write(self._frame)
  
     def setCaptureSpace( self, fourccCode ):
@@ -177,7 +178,7 @@ class CaptureManager( object ):
         try: 
             self.setProp('fourcc', fourccCode)
         except Exception as e:
-            logc.exception(e)
+            logger.exception(e)
 
     def getResolution( self ):
         h = self.getProp( 'height')
@@ -199,9 +200,9 @@ class CaptureManager( object ):
 
         newval = self._capture.get(props[prop])
         if newval == 0:
-            logc.info('- get prop %s\tnot available' % prop)
+            logger.info('- get prop %s\tnot available' % prop)
         else:
-            logc.info('- get prop: %s\t%s' % (prop, newval) )
+            logger.info('- get prop: %s\t%s' % (prop, newval) )
         return newval
 
     def setProp( self, prop, value):
@@ -219,7 +220,7 @@ class CaptureManager( object ):
                  }
     
         self._capture.set(props[prop], float(value))
-        logc.info('- set prop: %s\t%s' % ( prop, str(value) ))
+        logger.info('- set prop: %s\t%s' % ( prop, str(value) ))
         self._capture.get(props[prop])
     
       
@@ -233,9 +234,9 @@ class CaptureManager( object ):
                            (cv2.CAP_PROP_EXPOSURE, "Exposure")]:
             value = self._capture.get(prop)
             if value == 0:
-                logc.info(" - %s not available" % name)
+                logger.info(" - %s not available" % name)
             else:
-                logc.info(" - %s = %r" % (name, value))
+                logger.info(" - %s = %r" % (name, value))
 
  
 

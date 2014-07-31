@@ -21,6 +21,8 @@ HOME = os.getenv( 'HOME' )
 if platform == 'win32':
 	HOME = os.path.realpath( "C:/" )  # Arguably, this should be %APPDATA% or %TEMP%
 
+
+
 class EasyEBB:
     def __init__( self, resolution, sizeMM ):
         """
@@ -40,7 +42,7 @@ class EasyEBB:
         self.colNumPix = resolution[0] 
         self.rowNumPix = resolution[1] 
 
-        logger.warning('Resolution is %s: ' % str( resolution ) )
+        logger.info('Resolution is %s: ' % str( resolution ) )
         logger.info('Size in pix:\tcol %d\trow  %d' %
                      (self.colNumPix, self.rowNumPix) )
 
@@ -77,10 +79,10 @@ class EasyEBB:
         self.colPixStep = self.stepUM * self.colPixSpacing
         self.rowPixStep = self.stepUM * self.rowPixSpacing
         
-        logger.warning('One step is %0.3f pixels' %  (self.colPixStep) )
+        logger.info('One step is %0.3f pixels' %  (self.colPixStep) )
         logger.info('Current stepMode value: %0.4f, EBB stepMode key: %d' % 
                     (self.stepOpts[self.stepMode], self.stepMode ))
-        logger.warning('1 step = %0.4f um' % self.stepUM )
+        logger.info('1 step = %0.4f um' % self.stepUM )
 
 
 
@@ -146,7 +148,7 @@ class EasyEBB:
             raise serial.SerialException('Unable to find serial port') 
             return False
         else: 
-            logger.warning("Motors connected")
+            logger.info("Motors connected")
             return True
         
 #        sys.exit(0)
@@ -173,7 +175,7 @@ class EasyEBB:
         logging.debug('Get Serial Port Start')
         #try to connect to EBB devices
         for strComPort in eggbot_scan.findEiBotBoards():
-            logger.debug('trying to connect to EBB device: %s' % str(strComPort) )
+            logger.info('trying to connect to EBB device: %s' % str(strComPort) )
             serialPort = self.testSerialPort( strComPort )
             if serialPort:
                 self.actualSerialPort = strComPort
