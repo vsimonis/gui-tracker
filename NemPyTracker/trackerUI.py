@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'NemPyTracker.ui'
 #
-# Created: Thu Jul 31 14:13:59 2014
+# Created: Thu Jul 31 15:30:20 2014
 #      by: PyQt5 UI code generator 5.3.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -13,6 +13,11 @@ class Ui_TrackerUI(object):
     def setupUi(self, TrackerUI):
         TrackerUI.setObjectName("TrackerUI")
         TrackerUI.resize(800, 600)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(TrackerUI.sizePolicy().hasHeightForWidth())
+        TrackerUI.setSizePolicy(sizePolicy)
         TrackerUI.setMinimumSize(QtCore.QSize(800, 600))
         TrackerUI.setMaximumSize(QtCore.QSize(800, 600))
         font = QtGui.QFont()
@@ -67,7 +72,7 @@ class Ui_TrackerUI(object):
         self.srcControls.addWidget(self.srcCombo)
         self.horizontalLayout.addLayout(self.srcControls)
         self.layoutWidget1 = QtWidgets.QWidget(self.centralwidget)
-        self.layoutWidget1.setGeometry(QtCore.QRect(670, 30, 121, 481))
+        self.layoutWidget1.setGeometry(QtCore.QRect(670, 40, 121, 488))
         self.layoutWidget1.setObjectName("layoutWidget1")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget1)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
