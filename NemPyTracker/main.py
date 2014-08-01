@@ -468,8 +468,8 @@ class Gui(QtWidgets.QMainWindow):
                     
                     self.ui.videoFrame.setPixmap(self._cap.convertFrame(self.currentFrame))
                     self.ui.videoFrame.setScaledContents(True)
-
-            self.ui.fps.setText( 'FPS: %0.2f' % ( self._cap._fpsEstimate ))
+            if self._cap._fpsEstimate:
+               self.ui.fps.setText( 'FPS: %0.2f' % ( self._cap._fpsEstimate ))
             if self.startRecTime:
                 elapsedSec = time.time() - self.startRecTime
                 elapsed = time.strftime("%H.%M.%S", time.gmtime(elapsedSec) ) 

@@ -35,5 +35,8 @@
     <Compile Include="tracker.py" />
     <Compile Include="utils.py" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="output\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
 </Project>
