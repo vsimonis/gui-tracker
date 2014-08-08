@@ -35,8 +35,8 @@ class WormFinder ( object ):
         self.captureSize = utils.Rect(self.actualRes[0], self.actualRes[1], self.centerPt)
         self.cropRegion = utils.Rect(self.cropSize,self.cropSize,self.centerPt) 
         
-        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize, 
-                                           self.actualRes[1] - self.cropSize, 
+        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize - 100, 
+                                           self.actualRes[1] - self.cropSize - 100, 
                                            self.centerPt)
 
         ### Timing ###
@@ -74,8 +74,8 @@ class WormFinder ( object ):
     def setDecisionOffset( self, value ):
         self.cropSize = value
         self.cropRegion = utils.Rect(self.cropSize,self.cropSize,self.centerPt) 
-        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize,
-                                           self.actualRes[1] - self.cropSize,
+        self.decisionBoundary = utils.Rect(self.actualRes[0] - self.cropSize - 100,
+                                           self.actualRes[1] - self.cropSize - 100,
                                            self.centerPt)
 
     @property

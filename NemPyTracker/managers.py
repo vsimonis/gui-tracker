@@ -35,16 +35,21 @@ class CaptureManager( object ):
         return self._frame
     def isColor (self ):
         if self._frame is not None:
-            s = numpy.shape(self._frame )
-            #logging.warning( str(s) )
-            #logging.warning( type(s[2]))
-            if s[2] == 3:
-                logging.warning('Color')
-                return True
-            if s[2] == 1:
-                logging.warning('Grayscale')
+            logger.warning( 'np size %s' % str(numpy.size(self._frame)))
+            logger.warning( 'np shape %s' % str(numpy.shape(self._frame)))
+            
+            s = numpy.size(self._frame )
+            if s == 3:
+                #logging.warning( str(s) )
+                #logging.warning( type(s[2]))
+                if np.shape(self._frame)[2] == 3:
+                    logging.warning('Color')
+                    return True
+                elif np.shape(self._frame)[2] == 1:
+                    logging.warning('Grayscale')
+                    return False
+            else:
                 return False
-
     def resetFPSestimate( self ):
         self._framesElapsed = 0
 
@@ -79,7 +84,6 @@ class CaptureManager( object ):
         for i in range(256):
             result.setColor(i, QtGui.QColor(i, i, i).rgb())
         return result
-
     def convertFrame(self,imgIn):
         """                                                    
         converts frame to format suitable for QtGui            
@@ -153,7 +157,7 @@ class CaptureManager( object ):
         if not self.isWritingVideo:
             return
         if self._videoWriter is None:
-            fps = self._capture.get( cv2.CAP_PROP_FPS ) 
+            fps = self._capture.get( cv2.cv.CV_CAP_PROP_FPS ) 
             logger.info("fps: %d" % fps)
             if fps <= 0.0:
                 if self._framesElapsed < 20: 
@@ -163,13 +167,13 @@ class CaptureManager( object ):
                     logger.warning('fps estimate used: %d' % self._fpsEstimate )
                     fps = self._fpsEstimate            
 
-            size = ( int (self._capture.get( cv2.CAP_PROP_FRAME_WIDTH )), 
-                     int( self._capture.get( cv2.CAP_PROP_FRAME_HEIGHT) ))
+            size = ( int (self._capture.get( cv2.cv.CV_CAP_PROP_FRAME_WIDTH )), 
+                     int( self._capture.get( cv2.cv.CV_CAP_PROP_FRAME_HEIGHT) ))
             logger.info('size used: %d x %d' % (size[0], size[1]) )
             #self._videoEncoding = -1
-            #self.isColor()
+            self.isColor()
             self._videoWriter = cv2.VideoWriter( self._videoFilename, 
-                                                 self._videoEncoding, fps, size, self.isColor() )
+                                                 self._videoEncoding, fps, size, False )
         logger.warning("wrote frame")
         self._videoWriter.write(self._frame)
  
@@ -187,15 +191,15 @@ class CaptureManager( object ):
    
     def getProp( self, prop ):
         props = {
-                 'mode': cv2.CAP_PROP_MODE,
-                 'brightness': cv2.CAP_PROP_BRIGHTNESS,
-                 'contrast': cv2.CAP_PROP_CONTRAST,
-                 'saturation': cv2.CAP_PROP_SATURATION,
-                 'hue':cv2.CAP_PROP_HUE,
-                 'gain': cv2.CAP_PROP_GAIN,
-                 'exposure': cv2.CAP_PROP_EXPOSURE,
-                 'height': cv2.CAP_PROP_FRAME_HEIGHT,
-                 'width': cv2.CAP_PROP_FRAME_WIDTH
+  #               'mode': cv2.CAP_PROP_MODE,
+  #               'brightness': cv2.CAP_PROP_BRIGHTNESS,
+  #               'contrast': cv2.CAP_PROP_CONTRAST,
+  #               'saturation': cv2.CAP_PROP_SATURATION,
+  #               'hue':cv2.CAP_PROP_HUE,
+  #               'gain': cv2.CAP_PROP_GAIN,
+  #               'exposure': cv2.CAP_PROP_EXPOSURE,
+                 'height': cv2.cv.CV_CAP_PROP_FRAME_HEIGHT,
+                 'width': cv2.cv.CV_CAP_PROP_FRAME_WIDTH
                  }
 
         newval = self._capture.get(props[prop])
@@ -207,16 +211,16 @@ class CaptureManager( object ):
 
     def setProp( self, prop, value):
         props = {
-                 'mode': cv2.CAP_PROP_MODE,
-                 'brightness': cv2.CAP_PROP_BRIGHTNESS,
-                 'contrast': cv2.CAP_PROP_CONTRAST,
-                 'saturation': cv2.CAP_PROP_SATURATION,
-                 'hue':cv2.CAP_PROP_HUE,
-                 'gain': cv2.CAP_PROP_GAIN,
-                 'exposure': cv2.CAP_PROP_EXPOSURE,
-                 'height': cv2.CAP_PROP_FRAME_HEIGHT,
-                 'width': cv2.CAP_PROP_FRAME_WIDTH,
-                 'fourcc': cv2.CAP_PROP_FOURCC
+#                 'mode': cv2.CAP_PROP_MODE,
+#                 'brightness': cv2.CAP_PROP_BRIGHTNESS,
+#                 'contrast': cv2.CAP_PROP_CONTRAST,
+#                 'saturation': cv2.CAP_PROP_SATURATION,
+#                 'hue':cv2.CAP_PROP_HUE,
+#                 'gain': cv2.CAP_PROP_GAIN,
+#                 'exposure': cv2.CAP_PROP_EXPOSURE,
+                 'height': cv2.cv.CV_CAP_PROP_FRAME_HEIGHT,
+                 'width': cv2.cv.CV_CAP_PROP_FRAME_WIDTH,
+#                 'fourcc': cv2.CAP_PROP_FOURCC
                  }
     
         self._capture.set(props[prop], float(value))
@@ -224,19 +228,19 @@ class CaptureManager( object ):
         self._capture.get(props[prop])
     
       
-    def debugProps( self ):
-        for prop, name in [(cv2.CAP_PROP_MODE, "Mode"),
-                           (cv2.CAP_PROP_BRIGHTNESS, "Brightness"),
-                           (cv2.CAP_PROP_CONTRAST, "Contrast"),
-                           (cv2.CAP_PROP_SATURATION, "Saturation"),
-                           (cv2.CAP_PROP_HUE, "Hue"),
-                           (cv2.CAP_PROP_GAIN, "Gain"),
-                           (cv2.CAP_PROP_EXPOSURE, "Exposure")]:
-            value = self._capture.get(prop)
-            if value == 0:
-                logger.info(" - %s not available" % name)
-            else:
-                logger.info(" - %s = %r" % (name, value))
+ #   def debugProps( self ):
+ #       for prop, name in [(cv2.CAP_PROP_MODE, "Mode"),
+ #                          (cv2.CAP_PROP_BRIGHTNESS, "Brightness"),
+ #                          (cv2.CAP_PROP_CONTRAST, "Contrast"),
+ #                          (cv2.CAP_PROP_SATURATION, "Saturation"),
+ #                          (cv2.CAP_PROP_HUE, "Hue"),
+ #                          (cv2.CAP_PROP_GAIN, "Gain"),
+ #                          (cv2.CAP_PROP_EXPOSURE, "Exposure")]:
+ #           value = self._capture.get(prop)
+ #           if value == 0:
+ #               logger.info(" - %s not available" % name)
+ #           else:
+ #               logger.info(" - %s = %r" % (name, value))
 
  
 

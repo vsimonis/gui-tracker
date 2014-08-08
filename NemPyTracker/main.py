@@ -175,7 +175,7 @@ class Gui(QtWidgets.QMainWindow):
                 fourcc = cv2.VideoWriter_fourcc(*'IYUV')
                 logger.warning( 'fourcc is IYUV')
             else:
-                fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+                fourcc = cv2.cv.CV_FOURCC(*'MJPG')#cv2.VideoWriter_fourcc(*'MJPG')
                 logger.warning( 'fourcc is MJPG')
             if not self._cap.isWritingVideo:
                 self._cap.startWritingVideo('%s.avi' % self.shareFileName, 
@@ -207,7 +207,7 @@ class Gui(QtWidgets.QMainWindow):
             self.setSource(self.ui.sourceCombo.currentText())
 
         self.centerPt = utils.Point(self.actualRes[0] / 2, self.actualRes[1] / 2)
-        self.cropSize = 100
+        self.cropSize = 150
         
         self.finderArgs = {
             'gsize' :  45,
@@ -338,7 +338,7 @@ class Gui(QtWidgets.QMainWindow):
     def motors( self, direction):
         if self.ebb:
             xdir = 1
-            ydir = 1
+            ydir = -1 #up is down
             t = 100
 
             dir ={ 'left': (t, xdir * self.multFactor * (-1), 0 ) ,
@@ -401,7 +401,8 @@ class Gui(QtWidgets.QMainWindow):
             pass
             
     def isColor( self, imgIn ):
-        
+        s = np.shape(imgIn)
+        if s == 3:
             try:
                 ncolor = np.shape(imgIn)[2]
                 boolt = int(ncolor) > 2
@@ -414,6 +415,8 @@ class Gui(QtWidgets.QMainWindow):
                 else:
                     logger.warning('Issue with video input')
                     self.resetAll()
+        else:
+            return False
    
     def play( self ):
         
@@ -433,8 +436,8 @@ class Gui(QtWidgets.QMainWindow):
                     logger.exception("No Frame")
                 finally:
                     self._cap.exitFrame()
-            
-            self._cap.exitFrame()
+            else:
+                self._cap.exitFrame()
             
             if not self.runTracking: #no finder
                 if self.showImage: #yes capture
@@ -444,7 +447,7 @@ class Gui(QtWidgets.QMainWindow):
                 ## Stop if too dark!!!
                 if time.time() - self.startTrackTime < 5:
                     self.firstAvgPixIntensity = np.mean(self.currentFrame)
-                    logger.debug('first avg int: %d' % self.firstAvgPixIntensity)
+                    logger.warning('first avg int: %d' % self.firstAvgPixIntensity)
                ## Tracking procedure
                 if time.time() - self._lastCheck >= self._sampleFreq:
                     gaussian = self._wormFinder.processFrame( self.currentFrame )
@@ -454,7 +457,7 @@ class Gui(QtWidgets.QMainWindow):
                     if self.motorsOn: #yes motorized
                         ## Stop motors if too dark
                         self.currentAvgPixIntensity = np.mean(self.currentFrame)
-                        logger.debug('current avg int: %d' % self.currentAvgPixIntensity)
+                        logger.warning('current avg int: %d' % self.currentAvgPixIntensity)
                         if self.currentAvgPixIntensity < self.firstAvgPixIntensity - 50:
                             logger.warning('Darkening of picture: motors turned off')
                             if self.motorsOn:

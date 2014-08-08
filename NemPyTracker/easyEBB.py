@@ -106,7 +106,7 @@ class EasyEBB:
          on the worm's column (x) and row (y) position in the image
          given in pixels
          """
-         
+         self.enableMotors()
          #logger.warning('Centering Worm')
          xInstPix = self.colMid - colWormPix
          yInstPix = self.rowMid - rowWormPix
@@ -118,6 +118,7 @@ class EasyEBB:
          #send x, y separately
          self.move( duration, -colSteps, rowSteps) 
          #self.move( duration, 0, rowSteps)
+         self.disableMotors()
          return -colSteps, rowSteps
         
     def move(self, duration, xstep, ystep):
