@@ -338,7 +338,7 @@ class Gui(QtWidgets.QMainWindow):
     def motors( self, direction):
         if self.ebb:
             xdir = 1
-            ydir = -1 #up is down
+            ydir = 1 #up is down
             t = 100
 
             dir ={ 'left': (t, xdir * self.multFactor * (-1), 0 ) ,
