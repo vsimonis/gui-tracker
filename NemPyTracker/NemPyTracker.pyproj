@@ -31,8 +31,9 @@
     <Compile Include="finder.py" />
     <Compile Include="main.py" />
     <Compile Include="managers.py" />
-    <Compile Include="NemPyTracker.py" />
+    <Compile Include="nemPyTrackerUI-big.py" />
     <Compile Include="tracker.py" />
+    <Compile Include="trackerUI.py" />
     <Compile Include="utils.py" />
   </ItemGroup>
   <ItemGroup>
