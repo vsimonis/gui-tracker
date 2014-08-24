@@ -36,16 +36,15 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self._cap  = None
         #What to display on screeeeeeen
-        source = [0, 1, 2, 3, 'led_move1.avi', 'wormtest.avi',
-                  'screencast.avi',
-                  'screencast 1.avi',
-                  'shortNoBox.avi',
-                  'longNoBox.avi',
-                  'H299.avi',
-                  'testRec.avi',
-                  'longDemo.avi',
-                  'cinqodemayo.avi']
-        
+        source = [0, 1, 2, 3 ]
+
+        try:
+            dirList = os.listdir(os.getcwd())
+            for fileName in dirList:
+                if 'avi' in fileName:
+                    source.append(fileName)
+        except Exception as e:
+            logger.exception(str(e))
         for s in source:
             self.ui.srcCombo.addItem(str(s))
         self.ui.srcCombo.setCurrentText('0')
@@ -87,9 +86,10 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.srcCombo.activated['QString'].connect( self.setSource )
 
         self.ui.scalingSlider.valueChanged[int].connect( self.setMultFactor )
+        self.ui.scalingSlider.setValue(10) #default to 10 steps
         self.ui.scaling.setText( 'Step scaling is %d' % self.ui.scalingSlider.value() ) 
         self.multFactor = self.ui.scalingSlider.value()
-        self.ui.studyName.editingFinished.connect( self.setFileName )
+        self.ui.studyName.returnPressed.connect( self.setFileName )
 
         ## Change button colors for pretty
  

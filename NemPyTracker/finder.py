@@ -42,9 +42,9 @@ class WormFinder ( object ):
         ### Timing ###
         self.lastRefTime = time.time()        
         self.pauseFrame = 0 #cropping wise
-        self.nPauseFrames = 10 #cropping wise
+        self.nPauseFrames = 20 #cropping wise
         
-        self.breakDuration = 3 # motor wise
+        self.breakDuration = 5 # motor wise
         self.breakStart = time.time()
 
         ### Worm Finding
